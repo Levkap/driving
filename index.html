@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Driving Game</title>
+    <style>
+        body, html { height: 100%; margin: 0; overflow: hidden; background: black; }
+        #gameContainer { position: relative; width: 600px; height: 100%; margin: auto; background: gray; overflow: hidden; }
+        .car { position: absolute; width: 50px; height: 100px; background: blue; bottom: 20px; left: 50%; transform: translateX(-50%); }
+        .obstacle { position: absolute; width: 50px; height: 100px; background: red; }
+        #gameOver {
+            display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            color: white; font-size: 2em; z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+<div id="gameContainer">
+    <div class="car"></div>
+    <div id="gameOver">BOOM, game over!</div>
+</div>
+<script>
+    const gameContainer = document.getElementById('gameContainer');
+    const car = document.querySelector('.car');
+    const gameOverText = document.getElementById('gameOver');
+    let gameActive = true;
+    let obstacleSpeed = 2; // Initial speed of obstacles
+    let obstacleCreationInterval = 2000; // Initial obstacle creation interval
+    let speedIncreaseInterval = 5000; // Interval to increase speed
+    let speedIncreaseAmount = 4; // Amount to increase speed by
+
+    document.addEventListener('keydown', moveCar);
+    car.addEventListener('touchstart', (e) => {
+        startX = e.touches[0].pageX;
+    }, {passive: true});
+    car.addEventListener('touchmove', (e) => {
+        if (!gameActive) return;
+        e.preventDefault();
+        const touchX = e.touches[0].pageX;
+        moveCarTo(touchX - gameContainer.offsetLeft - car.offsetWidth / 2);
+    }, {passive: false});
+
+    function moveCar(event) {
+        if (!gameActive) return;
+        let carPosition = car.offsetLeft;
+        if (event.key === "ArrowLeft" && carPosition > 0) {
+            carPosition -= 10;
+        } else if (event.key === "ArrowRight" && carPosition < gameContainer.offsetWidth - car.offsetWidth) {
+            carPosition += 10;
+        }
+        moveCarTo(carPosition);
+    }
+
+    function moveCarTo(position) {
+        if (position < 0) position = 0;
+        if (position > gameContainer.offsetWidth - car.offsetWidth) position = gameContainer.offsetWidth - car.offsetWidth;
+        car.style.left = `${position}px`;
+    }
+
+    function createObstacle() {
+        if (!gameActive) return;
+        const obstacle = document.createElement('div');
+        obstacle.classList.add('obstacle');
+        obstacle.style.left = `${Math.floor(Math.random() * (gameContainer.offsetWidth - 50))}px`;
+        obstacle.style.top = "-100px";
+        gameContainer.appendChild(obstacle);
+        moveElement(obstacle);
+    }
+
+    function moveElement(element) {
+        let pos = -100;
+        const interval = setInterval(function() {
+            if (!gameActive) {
+                clearInterval(interval);
+                return;
+            }
+            if (pos > gameContainer.offsetHeight) {
+                clearInterval(interval);
+                element.remove();
+            } else {
+                element.style.top = `${pos += obstacleSpeed}px`;
+                checkCollision(element);
+            }
+        }, 20);
+    }
+
+    function checkCollision(element) {
+        const carRect = car.getBoundingClientRect();
+        const elementRect = element.getBoundingClientRect();
+        if (carRect.x < elementRect.x + elementRect.width && carRect.x + carRect.width > elementRect.x &&
+            carRect.y < elementRect.y + elementRect.height && carRect.height + carRect.y > elementRect.y) {
+            gameActive = false;
+            gameOver();
+        }
+    }
+
+    function gameOver() {
+        gameOverText.style.display = "block";
+        clearInterval(obstacleCreationTimer);
+        clearInterval(speedIncreaseTimer);
+    }
+
+    let obstacleCreationTimer = setInterval(createObstacle, obstacleCreationInterval);
+
+    const speedIncreaseTimer = setInterval(() => {
+        obstacleSpeed += speedIncreaseAmount;
+        obstacleCreationInterval = Math.max(500, obstacleCreationInterval - 100 * (obstacleSpeed / 2));
+        clearInterval(obstacleCreationTimer);
+        obstacleCreationTimer = setInterval(createObstacle, obstacleCreationInterval);
+    }, speedIncreaseInterval);
+
+</script>
+</body>
+</html>
